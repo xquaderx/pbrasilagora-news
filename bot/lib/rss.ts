@@ -99,12 +99,12 @@ export function parseRss(xml: string, source: string): NewsItem[] {
 
 export const BRAZIL_FEEDS: ReadonlyArray<{ source: string; url: string }> = [
   {
-    source: "G1",
-    url: "https://g1.globo.com/rss/g1/",
-  },
-  {
     source: "G1 Política",
     url: "https://g1.globo.com/rss/g1/politica/",
+  },
+  {
+    source: "G1 Economia",
+    url: "https://g1.globo.com/rss/g1/economia/",
   },
   {
     source: "Agência Brasil",

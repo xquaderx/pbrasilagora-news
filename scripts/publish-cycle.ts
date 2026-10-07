@@ -57,6 +57,14 @@ async function main(): Promise<void> {
   const kv = createFileKv(resolve("data/posted-kv.json"));
   const items = await fetchCandidates();
 
+  type Candidate = {
+    item: (typeof items)[number];
+    score: number;
+    imageUrl: string;
+    summary: string;
+  };
+  const candidates: Candidate[] = [];
+
   for (const item of items) {
     const dedupe = await findDuplicate(kv, {
       link: item.link,
@@ -78,49 +86,60 @@ async function main(): Promise<void> {
     });
     if (!imageUrl) continue;
 
-    const summary = item.summary.slice(0, 420);
-    const caption = buildNewsCaption({
-      title: item.title,
-      summary,
-      source: item.source,
+    candidates.push({
+      item,
+      score: credibility.score,
+      imageUrl,
+      summary: item.summary.slice(0, 420),
     });
+  }
 
-    const result = await sendTelegramPhoto({
-      token,
-      chatId,
-      photoUrl: imageUrl,
-      caption: caption.slice(0, 1024),
-    });
-    if (!result.ok) {
-      console.error("post_failed", result.error, item.link);
-      continue;
-    }
-
-    await seedMessageReaction({
-      token,
-      chatId,
-      messageId: result.messageId,
-      emoji: "🔥",
-    });
-    await rememberPosted(kv, {
-      link: item.link,
-      title: item.title,
-      messageId: result.messageId,
-    });
-
-    console.log(
-      JSON.stringify({
-        posted: true,
-        messageId: result.messageId,
-        title: item.title,
-        source: item.source,
-        score: credibility.score,
-      }),
-    );
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  if (!best) {
+    console.log(JSON.stringify({ posted: false, reason: "no_publishable_item" }));
     return;
   }
 
-  console.log(JSON.stringify({ posted: false, reason: "no_publishable_item" }));
+  const caption = buildNewsCaption({
+    title: best.item.title,
+    summary: best.summary,
+    source: best.item.source,
+  });
+
+  const result = await sendTelegramPhoto({
+    token,
+    chatId,
+    photoUrl: best.imageUrl,
+    caption: caption.slice(0, 1024),
+  });
+  if (!result.ok) {
+    console.error("post_failed", result.error, best.item.link);
+    console.log(JSON.stringify({ posted: false, reason: result.error }));
+    return;
+  }
+
+  await seedMessageReaction({
+    token,
+    chatId,
+    messageId: result.messageId,
+    emoji: "🔥",
+  });
+  await rememberPosted(kv, {
+    link: best.item.link,
+    title: best.item.title,
+    messageId: result.messageId,
+  });
+
+  console.log(
+    JSON.stringify({
+      posted: true,
+      messageId: result.messageId,
+      title: best.item.title,
+      source: best.item.source,
+      score: best.score,
+    }),
+  );
 }
 
 async function fetchCandidates(): Promise<NewsItem[]> {

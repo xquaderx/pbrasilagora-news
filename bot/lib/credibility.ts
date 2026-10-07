@@ -8,6 +8,7 @@ export type CredibilityResult = {
 const TRUSTED_SOURCES = new Set([
   "g1",
   "g1 política",
+  "g1 economia",
   "agência brasil",
   "agencia brasil",
   "bbc brasil",
@@ -30,6 +31,39 @@ const BLOCKED_HOST_HINTS = [
   "wordpress.com",
   "rumor",
   "boato",
+];
+
+/** Hard reject — TV roundups, empty video posts, non-news junk. */
+const LOW_INFO_PATTERNS = [
+  /^\s*v[íi]deos?\s*:/i,
+  /\bv[íi]deo\s*:\s*/i,
+  /\bassista\s+(a\s+)?(um\s+)?v[íi]deo\b/i,
+  /\bassista\s+(ao|à)\s+/i,
+  /\bao\s+vivo\b/i,
+  /\bloterias?\b/i,
+  /\bprogramação da\b/i,
+  /\btelejornais?\b/i,
+  /\bjornal\s+(nacional|hoje|da\s+globo|da\s+record)\b/i,
+  /\b(mg2|sptv|rj2|df2|bom\s+dia)\b/i,
+  /\bprincipais notícias do (estado|dia)\b/i,
+  /\bresumo do dia\b/i,
+  /\bgiro de notícias\b/i,
+  /\bveja\s+como\s+foi\b/i,
+  /\bconfira\s+os\s+destaques\b/i,
+  /\bplaylist\b/i,
+  /\benquete\b/i,
+  /\bhoróscopo\b/i,
+  /\bprevisão do tempo\b/i,
+  /\bprevisao do tempo\b/i,
+  /\bquarta-feira,?\s+\d/i, // "MG2, quarta-feira, 7 de outubro..."
+  /\bsegunda-feira,?\s+\d/i,
+  /\bterça-feira,?\s+\d/i,
+  /\bterca-feira,?\s+\d/i,
+  /\bquinta-feira,?\s+\d/i,
+  /\bsexta-feira,?\s+\d/i,
+  /\bsábado,?\s+\d/i,
+  /\bsabado,?\s+\d/i,
+  /\bdomingo,?\s+\d/i,
 ];
 
 const FAKE_PHRASES = [
@@ -57,6 +91,10 @@ export function assessCredibility(input: {
   let score = 50;
   const sourceNorm = (input.source ?? "").toLowerCase().trim();
   const host = safeHost(input.articleLink);
+  const title = input.title.trim();
+  const summary = input.summary.trim();
+  const text = `${title}\n${summary}`;
+  const path = safePath(input.articleLink);
 
   let sourceTier: CredibilityResult["sourceTier"] = "unknown";
   if (TRUSTED_SOURCES.has(sourceNorm)) {
@@ -75,12 +113,25 @@ export function assessCredibility(input: {
   for (const hint of BLOCKED_HOST_HINTS) {
     if (host.includes(hint) || input.articleLink.toLowerCase().includes(hint)) {
       sourceTier = "blocked";
-      score -= 40;
+      score -= 50;
       reasons.push(`host_suspeito:${hint}`);
     }
   }
 
-  const text = `${input.title}\n${input.summary}`;
+  // URL shapes that are almost never useful channel posts.
+  if (/\/ao-vivo\//i.test(path) || /\/playlist\//i.test(path) || /\/video\//i.test(path)) {
+    score -= 50;
+    reasons.push("url_video_ou_ao_vivo");
+  }
+
+  for (const re of LOW_INFO_PATTERNS) {
+    if (re.test(text)) {
+      score -= 55;
+      reasons.push(`baixa_info:${re.source}`);
+      break;
+    }
+  }
+
   for (const re of FAKE_PHRASES) {
     if (re.test(text)) {
       score -= 25;
@@ -88,38 +139,70 @@ export function assessCredibility(input: {
     }
   }
 
-  if ((input.title.match(/!/g) ?? []).length >= 2) {
+  if ((title.match(/!/g) ?? []).length >= 2) {
     score -= 10;
     reasons.push("excesso_exclamacao");
   }
-  if (input.title === input.title.toUpperCase() && input.title.length > 12) {
+  if (title === title.toUpperCase() && title.length > 12) {
     score -= 15;
     reasons.push("titulo_caps");
   }
 
-  // Thin / empty summary is riskier for channel quality.
-  if (input.summary.trim().length < 40) {
-    score -= 10;
+  // Informative body: need concrete length and at least one fact-ish signal.
+  if (summary.length < 80) {
+    score -= 25;
     reasons.push("resumo_curto");
+  } else if (summary.length >= 140) {
+    score += 8;
+    reasons.push("resumo_substantivo");
   }
 
-  // Skip live TV / lottery / non-news pages that pollute RSS.
-  if (/\bao vivo\b|\bloterias?\b|\bprogramação da\b/i.test(text)) {
-    score -= 40;
-    reasons.push("nao_noticia");
+  if (!hasFactSignal(summary)) {
+    score -= 20;
+    reasons.push("resumo_vazio");
+  }
+
+  // Prefer national desk over random local TV catch-alls.
+  if (sourceNorm === "g1 política" || sourceNorm === "agência brasil" || sourceNorm === "agencia brasil") {
+    score += 5;
   }
 
   score = Math.max(0, Math.min(100, score));
-  const ok = sourceTier !== "blocked" && score >= 60;
-  if (ok) reasons.push("aprovado");
-  else reasons.push("reprovado");
+  const hardReject = reasons.some((r) =>
+    r.startsWith("baixa_info:") ||
+    r === "url_video_ou_ao_vivo" ||
+    r.startsWith("host_suspeito:")
+  );
+  const ok = !hardReject && sourceTier !== "blocked" && score >= 70;
+  reasons.push(ok ? "aprovado" : "reprovado");
 
   return { ok, score, reasons, sourceTier };
+}
+
+function hasFactSignal(summary: string): boolean {
+  // Numbers, money, names with verbs, or multi-sentence substance.
+  if (/\d/.test(summary)) return true;
+  if (/R\$\s*\d/i.test(summary)) return true;
+  if (summary.split(/[.!?]/).filter((s) => s.trim().length > 30).length >= 2) {
+    return true;
+  }
+  // At least one past/present news verb in PT.
+  return /\b(disse|afirmou|anunciou|decidiu|aprovou|morreu|venceu|subiu|caiu|recebeu|confirmou|negou|elevou|reduziu|investiga|prendeu)\b/i.test(
+    summary,
+  );
 }
 
 function safeHost(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function safePath(url: string): string {
+  try {
+    return new URL(url).pathname.toLowerCase();
   } catch {
     return "";
   }

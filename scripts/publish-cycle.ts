@@ -18,6 +18,7 @@ import {
   isFreshEnough,
   parseRss,
   publishedSortKey,
+  readFeedText,
   type NewsItem,
 } from "../bot/lib/rss.js";
 import {
@@ -207,7 +208,7 @@ async function fetchCandidates(): Promise<NewsItem[]> {
           signal: AbortSignal.timeout(12_000),
         });
         if (!response.ok) return;
-        for (const item of parseRss(await response.text(), feed.source)) {
+        for (const item of parseRss(await readFeedText(response), feed.source)) {
           if (
             feed.requireBrazilMention &&
             !isAboutBrazil(item.title, item.summary)

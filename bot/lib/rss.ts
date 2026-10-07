@@ -11,12 +11,36 @@ export type NewsItem = {
 function decodeXml(text: string): string {
   return text
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = Number(n);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : _;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
+      const code = Number.parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : _;
+    })
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'");
+}
+
+/** Decode RSS body using XML/HTTP charset (Folha is often ISO-8859-1). */
+export async function readFeedText(response: Response): Promise<string> {
+  const buf = Buffer.from(await response.arrayBuffer());
+  const httpCs =
+    response.headers.get("content-type")?.match(/charset=([^\s;]+)/i)?.[1] ??
+    "";
+  const head = buf.subarray(0, 400).toString("latin1");
+  const xmlCs = head.match(/encoding=["']([^"']+)["']/i)?.[1] ?? "";
+  const charset = (xmlCs || httpCs || "utf-8").replace(/utf8/i, "utf-8");
+  try {
+    return new TextDecoder(charset as BufferEncoding).decode(buf);
+  } catch {
+    return buf.toString("utf8");
+  }
 }
 
 function stripHtml(text: string): string {

@@ -10,6 +10,7 @@ import {
   isFreshEnough,
   parseRss,
   publishedSortKey,
+  readFeedText,
   type NewsItem,
 } from "../lib/rss.js";
 
@@ -64,7 +65,7 @@ export default defineTool({
             errors.push({ source: feed.source, error: `HTTP ${response.status}` });
             return;
           }
-          const xml = await response.text();
+          const xml = await readFeedText(response);
           for (const item of parseRss(xml, feed.source)) {
             if (
               feed.requireBrazilMention &&

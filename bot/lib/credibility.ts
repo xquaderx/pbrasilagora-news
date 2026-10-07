@@ -58,6 +58,9 @@ const LOW_INFO_PATTERNS = [
   /\bhoróscopo\b/i,
   /\bprevisão do tempo\b/i,
   /\bprevisao do tempo\b/i,
+  /\bonde assistir\b/i,
+  /\bescalações?\b/i,
+  /\bescalacoes?\b/i,
   /\bquarta-feira,?\s+\d/i, // "MG2, quarta-feira, 7 de outubro..."
   /\bsegunda-feira,?\s+\d/i,
   /\bterça-feira,?\s+\d/i,

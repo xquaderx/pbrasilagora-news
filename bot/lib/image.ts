@@ -52,8 +52,20 @@ function absoluteUrl(url: string, base: string): string | null {
 
 function isLikelyImageUrl(url: string): boolean {
   if (!/^https?:\/\//i.test(url)) return false;
-  if (url.includes("svg")) return false;
-  return true;
+  const lower = url.toLowerCase();
+  if (lower.includes(".svg") || lower.includes("format(svg")) return false;
+  // Reject article pages accidentally treated as images.
+  if (/\.(ghtml|html|htm|php|aspx)(\?|$)/i.test(lower)) return false;
+  if (
+    /\.(jpe?g|png|webp|gif)(\?|$)/i.test(lower) ||
+    /\/(image|images|img|photos?|media|thumbnails?)\//i.test(lower) ||
+    /(glbimg|bbci\.co\.uk\/ace|imagens\.ebc|ichef\.bbci|s2-g1\.glbimg|i\.s3\.glbimg)/i.test(
+      lower,
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function decodeHtml(value: string): string {

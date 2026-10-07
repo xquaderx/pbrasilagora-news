@@ -95,51 +95,54 @@ async function main(): Promise<void> {
   }
 
   candidates.sort((a, b) => b.score - a.score);
-  const best = candidates[0];
-  if (!best) {
+  if (candidates.length === 0) {
     console.log(JSON.stringify({ posted: false, reason: "no_publishable_item" }));
     return;
   }
 
-  const caption = buildNewsCaption({
-    title: best.item.title,
-    summary: best.summary,
-    source: best.item.source,
-  });
+  for (const best of candidates) {
+    const caption = buildNewsCaption({
+      title: best.item.title,
+      summary: best.summary,
+      source: best.item.source,
+    });
 
-  const result = await sendTelegramPhoto({
-    token,
-    chatId,
-    photoUrl: best.imageUrl,
-    caption: caption.slice(0, 1024),
-  });
-  if (!result.ok) {
-    console.error("post_failed", result.error, best.item.link);
-    console.log(JSON.stringify({ posted: false, reason: result.error }));
+    const result = await sendTelegramPhoto({
+      token,
+      chatId,
+      photoUrl: best.imageUrl,
+      caption: caption.slice(0, 1024),
+    });
+    if (!result.ok) {
+      console.error("post_failed", result.error, best.item.link);
+      continue;
+    }
+
+    await seedMessageReaction({
+      token,
+      chatId,
+      messageId: result.messageId,
+      emoji: "🔥",
+    });
+    await rememberPosted(kv, {
+      link: best.item.link,
+      title: best.item.title,
+      messageId: result.messageId,
+    });
+
+    console.log(
+      JSON.stringify({
+        posted: true,
+        messageId: result.messageId,
+        title: best.item.title,
+        source: best.item.source,
+        score: best.score,
+      }),
+    );
     return;
   }
 
-  await seedMessageReaction({
-    token,
-    chatId,
-    messageId: result.messageId,
-    emoji: "🔥",
-  });
-  await rememberPosted(kv, {
-    link: best.item.link,
-    title: best.item.title,
-    messageId: result.messageId,
-  });
-
-  console.log(
-    JSON.stringify({
-      posted: true,
-      messageId: result.messageId,
-      title: best.item.title,
-      source: best.item.source,
-      score: best.score,
-    }),
-  );
+  console.log(JSON.stringify({ posted: false, reason: "all_candidates_failed" }));
 }
 
 async function fetchCandidates(): Promise<NewsItem[]> {

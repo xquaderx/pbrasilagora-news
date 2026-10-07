@@ -11,6 +11,7 @@ import { findDuplicate, rememberPosted } from "../bot/lib/dedupe.js";
 import { createFileKv } from "../bot/lib/file-kv.js";
 import { resolveNewsImage } from "../bot/lib/image.js";
 import { buildNewsCaption } from "../bot/lib/post-format.js";
+import { isSimilarTitle } from "../bot/lib/posted.js";
 import {
   BRAZIL_FEEDS,
   isFreshEnough,
@@ -72,6 +73,17 @@ async function main(): Promise<void> {
     });
     if (dedupe.duplicate) continue;
 
+    // Also skip near-duplicates already picked in this cycle.
+    if (
+      candidates.some(
+        (c) =>
+          c.item.link === item.link ||
+          isSimilarTitle(c.item.title, item.title),
+      )
+    ) {
+      continue;
+    }
+
     const credibility = assessCredibility({
       title: item.title,
       summary: item.summary,
@@ -106,7 +118,25 @@ async function main(): Promise<void> {
   let posted = 0;
   let failed = 0;
 
-  for (const best of candidates.slice(0, Math.max(1, maxPerCycle))) {
+  for (const best of candidates) {
+    if (posted >= Math.max(1, maxPerCycle)) break;
+
+    // Re-check right before send — catches same-cycle and cross-source dupes.
+    const again = await findDuplicate(kv, {
+      link: best.item.link,
+      title: best.item.title,
+    });
+    if (again.duplicate) {
+      console.log(
+        JSON.stringify({
+          skipped: true,
+          reason: again.reason,
+          title: best.item.title,
+        }),
+      );
+      continue;
+    }
+
     const caption = buildNewsCaption({
       title: best.item.title,
       summary: best.summary,

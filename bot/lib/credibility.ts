@@ -103,6 +103,12 @@ export function assessCredibility(input: {
     reasons.push("resumo_curto");
   }
 
+  // Skip live TV / lottery / non-news pages that pollute RSS.
+  if (/\bao vivo\b|\bloterias?\b|\bprogramação da\b/i.test(text)) {
+    score -= 40;
+    reasons.push("nao_noticia");
+  }
+
   score = Math.max(0, Math.min(100, score));
   const ok = sourceTier !== "blocked" && score >= 60;
   if (ok) reasons.push("aprovado");

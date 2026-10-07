@@ -7,7 +7,8 @@
     "check": "tsc --noEmit",
     "dev": "bdk dev",
     "validate": "bdk validate --dir .",
-    "eval": "bdk eval --dir ."
+    "eval": "bdk eval --dir .",
+    "publish:once": "tsx scripts/publish-cycle.ts"
   },
   "dependencies": {
     "@cursor/bdk": "^0.2.21",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "tsx": "^4.23.15",
     "typescript": "6.0.3"
   }
 }

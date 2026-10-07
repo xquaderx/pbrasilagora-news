@@ -1,4 +1,4 @@
-import type { HostKvApi } from "@cursor/bdk";
+import type { SimpleKv } from "./file-kv.js";
 import {
   isSimilarTitle,
   postedKey,
@@ -13,7 +13,7 @@ export type DedupeHit = {
 };
 
 export async function findDuplicate(
-  kv: HostKvApi,
+  kv: SimpleKv,
   input: { link: string; title: string },
 ): Promise<DedupeHit> {
   if ((await kv.get(postedKey(input.link))) !== undefined) {
@@ -33,7 +33,7 @@ export async function findDuplicate(
 }
 
 export async function rememberPosted(
-  kv: HostKvApi,
+  kv: SimpleKv,
   input: {
     link: string;
     title: string;

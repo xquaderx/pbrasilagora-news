@@ -94,13 +94,19 @@ async function main(): Promise<void> {
     });
   }
 
-  candidates.sort((a, b) => b.score - a.score);
-  if (candidates.length === 0) {
-    console.log(JSON.stringify({ posted: false, reason: "no_publishable_item" }));
-    return;
-  }
+  // Newest first — news should not wait in a queue.
+  candidates.sort((a, b) => {
+    const byTime =
+      publishedSortKey(b.item.publishedAt) - publishedSortKey(a.item.publishedAt);
+    if (byTime !== 0) return byTime;
+    return b.score - a.score;
+  });
 
-  for (const best of candidates) {
+  const maxPerCycle = Number(process.env.MAX_POSTS_PER_CYCLE ?? "5");
+  let posted = 0;
+  let failed = 0;
+
+  for (const best of candidates.slice(0, Math.max(1, maxPerCycle))) {
     const caption = buildNewsCaption({
       title: best.item.title,
       summary: best.summary,
@@ -114,6 +120,7 @@ async function main(): Promise<void> {
       caption: caption.slice(0, 1024),
     });
     if (!result.ok) {
+      failed += 1;
       console.error("post_failed", result.error, best.item.link);
       continue;
     }
@@ -129,6 +136,7 @@ async function main(): Promise<void> {
       title: best.item.title,
       messageId: result.messageId,
     });
+    posted += 1;
 
     console.log(
       JSON.stringify({
@@ -137,12 +145,22 @@ async function main(): Promise<void> {
         title: best.item.title,
         source: best.item.source,
         score: best.score,
+        publishedAt: best.item.publishedAt,
       }),
     );
-    return;
   }
 
-  console.log(JSON.stringify({ posted: false, reason: "all_candidates_failed" }));
+  if (posted === 0) {
+    console.log(
+      JSON.stringify({
+        posted: false,
+        reason: candidates.length === 0 ? "no_publishable_item" : "all_candidates_failed",
+        failed,
+      }),
+    );
+  } else {
+    console.log(JSON.stringify({ cycle_posted: posted, failed }));
+  }
 }
 
 async function fetchCandidates(): Promise<NewsItem[]> {
@@ -167,12 +185,14 @@ async function fetchCandidates(): Promise<NewsItem[]> {
     }),
   );
 
+  // Prefer very fresh items (12h) so the channel tracks breaking news.
+  const maxAgeMs = 1000 * 60 * 60 * 12;
   return [...byLink.values()]
-    .filter((i) => isFreshEnough(i.publishedAt))
+    .filter((i) => isFreshEnough(i.publishedAt, maxAgeMs))
     .sort(
       (a, b) => publishedSortKey(b.publishedAt) - publishedSortKey(a.publishedAt),
     )
-    .slice(0, 20);
+    .slice(0, 30);
 }
 
 main().catch((err) => {

@@ -1,0 +1,20 @@
+{
+  "name": "brasil-noticias",
+  "private": true,
+  "type": "module",
+  "description": "Canal Telegram de notícias do Brasil em português (BDK agent)",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "dev": "bdk dev",
+    "validate": "bdk validate --dir .",
+    "eval": "bdk eval --dir ."
+  },
+  "dependencies": {
+    "@cursor/bdk": "^0.2.21",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "6.0.3"
+  }
+}

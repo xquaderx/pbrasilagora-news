@@ -8,11 +8,11 @@ export default defineEval({
       description: "Scheduled-style cycle fetches Brazil news before posting.",
       async test(t) {
         await t.send(
-          "Rode um ciclo do canal: busque notícias novas sobre o Brasil e, se houver algo relevante, prepare posts em português. Não invente links.",
+          "Rode um ciclo do canal P Brasil Agora (estilo Topor): busque notícias do Brasil e prepare posts em português sem URLs externas no texto.",
         );
         t.succeeded();
         t.calledTool("fetch_brazil_news");
-        t.check(t.reply, includes(/notíc|Brasil|post|public|fonte|RSS|sem novidade/i));
+        t.check(t.reply, includes(/notíc|Brasil|post|public|fonte|RSS|sem novidade|Topor|Inscrever/i));
       },
     },
   ],

@@ -5,6 +5,7 @@ export type NewsItem = {
   summary: string;
   publishedAt: string | null;
   source: string;
+  imageUrl: string | null;
 };
 
 function decodeXml(text: string): string {
@@ -44,6 +45,22 @@ function linkFromItem(block: string): string | null {
   return null;
 }
 
+function imageFromItem(block: string): string | null {
+  const media =
+    block.match(
+      /<(?:media:content|media:thumbnail|enclosure)[^>]+url=["']([^"']+)["']/i,
+    ) ??
+    block.match(
+      /<(?:media:content|media:thumbnail|enclosure)[^>]+url=([^\s>]+)/i,
+    );
+  if (media?.[1] && /^https?:\/\//i.test(media[1])) return media[1];
+
+  const img = block.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (img?.[1] && /^https?:\/\//i.test(img[1])) return img[1];
+
+  return null;
+}
+
 export function parseRss(xml: string, source: string): NewsItem[] {
   const items: NewsItem[] = [];
   const blocks = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ??
@@ -73,6 +90,7 @@ export function parseRss(xml: string, source: string): NewsItem[] {
       summary: stripHtml(summaryRaw).slice(0, 500),
       publishedAt,
       source,
+      imageUrl: imageFromItem(block),
     });
   }
 

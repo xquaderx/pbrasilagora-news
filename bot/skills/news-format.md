@@ -1,28 +1,28 @@
 ---
-description: Use when drafting or polishing Telegram news posts in Brazilian Portuguese for the Brasil channel.
+description: Use when drafting Telegram posts for P Brasil Agora in Topor Live style (PT-BR).
 ---
 
-# Formato de notícias (PT-BR)
+# Formato Topor — P Brasil Agora
 
 ## Estrutura
 
-1. **Título** — uma linha, concreta (quem/o quê/onde quando couber).
-2. **Resumo** — 2–4 frases: o fato, o contexto mínimo, o impacto.
-3. **Link** — URL canônica da matéria (a ferramenta formata o HTML).
+1. **Foto** — use `imageUrl` do feed quando existir.
+2. **Título** — uma linha forte; a ferramenta prefixa `⚡️` e aplica negrito.
+3. **Corpo** — 2–4 frases; use `useQuote: true` quando for citação/destaque.
+4. **CTA** — automático: `👉 P Brasil Agora. Inscrever-se` (só nosso canal).
 
-## Regras
+## Regras duras
 
-- Escreva em português do Brasil; não misture inglês desnecessário.
-- Mantenha neutralidade: sem adjetivos partidários.
-- Não copie o lead inteiro da fonte; parafraseie com precisão.
-- Se a fonte for ambígua, prefira o título factual e um resumo curto.
-- Um post = um link. Não agrupe várias matérias no mesmo envio.
-- Evite emojis, ALL CAPS e listas de hashtags.
+- **Nenhuma URL externa** no título ou resumo (nem da matéria).
+- Mencione a fonte só pelo nome (`G1`, `Agência Brasil`), sem link.
+- Passe `articleLink` só para dedupe interno.
+- Um post = uma matéria.
+- Português do Brasil, neutro, sem hashtags.
 
-## Exemplo
+## Exemplo de inputs para `post_to_telegram`
 
-Título: Congresso analisa proposta de ajuste fiscal  
-Resumo: O texto prevê metas de despesas para o próximo ano. A votação
-ainda não tem data definida. Economistas divergem sobre o impacto no
-crescimento.  
-Link: https://exemplo.com/materia
+- title: `Dólar volta a R$ 5 após ajuste pós-eleitoral`
+- summary: `A cotação reagiu ao cenário externo e ao humor dos mercados no Brasil. Analistas apontam volatilidade nos próximos dias.`
+- source: `Agência Brasil`
+- articleLink: `(url interna, não sai no post)`
+- imageUrl: `(se houver)`

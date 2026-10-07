@@ -1,8 +1,10 @@
 import { prompt } from "@cursor/bdk";
 import { defineTool } from "@cursor/bdk/tools";
 import { z } from "zod";
+import { assessCredibility } from "../lib/credibility.js";
+import { findDuplicate, rememberPosted } from "../lib/dedupe.js";
+import { resolveNewsImage } from "../lib/image.js";
 import { buildNewsCaption, CHANNEL_PUBLIC_URL } from "../lib/post-format.js";
-import { postedKey, type PostedRecord } from "../lib/posted.js";
 import {
   seedMessageReaction,
   sendTelegramMessage,
@@ -18,38 +20,29 @@ type PostResult = {
   link: string;
   format: "photo" | "text";
   cta: string;
+  credibilityScore?: number;
 };
 
 export default defineTool({
   description: prompt`
-    Publish one Topor-style news post to the Telegram channel:
-    optional image, ⚡️ bold headline, body, and only our channel CTA link.
-    Pass articleLink for internal dedupe only — it is never shown in the post.
-    Never include external URLs in title/summary.
+    Publish one illustrated Topor-style news post to the Telegram channel.
+    Requires a credible non-duplicate story. Resolves image from imageUrl or
+    article page. articleLink is dedupe-only and never shown. No external URLs
+    in title/summary.
   `,
   effect: "write",
   inputSchema: z.object({
     title: z.string().min(3).max(220),
     summary: z.string().min(20).max(700),
-    articleLink: z
-      .string()
-      .url()
-      .describe("Canonical source URL for dedupe only; never printed in the post."),
+    articleLink: z.string().url(),
     source: z.string().min(1).max(80).optional(),
-    imageUrl: z
-      .string()
-      .url()
-      .optional()
-      .describe("Public image URL for the post photo (preferred)."),
-    useQuote: z
+    imageUrl: z.string().url().optional(),
+    useQuote: z.boolean().optional(),
+    reactionEmoji: z.string().max(8).optional(),
+    allowWithoutImage: z
       .boolean()
       .optional()
-      .describe("Wrap body in a Telegram blockquote. Default false."),
-    reactionEmoji: z
-      .string()
-      .max(8)
-      .optional()
-      .describe("Emoji to seed on the post. Default 🔥."),
+      .describe("Default false — skip if no image can be resolved."),
   }),
   dryRunResult: ({ articleLink, imageUrl }): PostResult => ({
     posted: false,
@@ -60,34 +53,79 @@ export default defineTool({
     format: imageUrl ? "photo" : "text",
     cta: CHANNEL_PUBLIC_URL,
   }),
-  async execute(
-    { title, summary, articleLink, source, imageUrl, useQuote, reactionEmoji },
-    ctx,
-  ): Promise<PostResult> {
+  async execute(input, ctx): Promise<PostResult> {
+    const {
+      title,
+      summary,
+      articleLink,
+      source,
+      imageUrl,
+      useQuote,
+      reactionEmoji,
+      allowWithoutImage,
+    } = input;
+
     const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
     const chatId = process.env.TELEGRAM_CHANNEL_ID?.trim();
     if (!token || !chatId) {
       return {
         posted: false,
-        reason:
-          "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID in the environment.",
+        reason: "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID.",
         link: articleLink,
-        format: imageUrl ? "photo" : "text",
+        format: "text",
         cta: CHANNEL_PUBLIC_URL,
       };
     }
 
-    const key = postedKey(articleLink);
-    const prior = await ctx.host.kv.get(key);
-    if (prior !== undefined) {
+    const dedupe = await findDuplicate(ctx.host.kv, {
+      link: articleLink,
+      title,
+    });
+    if (dedupe.duplicate) {
       return {
         posted: false,
         skipped: true,
-        reason: "already_posted",
+        reason: `already_posted:${dedupe.reason}`,
         link: articleLink,
         chatId,
-        format: imageUrl ? "photo" : "text",
+        format: "text",
         cta: CHANNEL_PUBLIC_URL,
+      };
+    }
+
+    const credibility = assessCredibility({
+      title,
+      summary,
+      source,
+      articleLink,
+    });
+    if (!credibility.ok) {
+      return {
+        posted: false,
+        skipped: true,
+        reason: `credibility_fail:${credibility.score}:${credibility.reasons.join(",")}`,
+        link: articleLink,
+        chatId,
+        format: "text",
+        cta: CHANNEL_PUBLIC_URL,
+        credibilityScore: credibility.score,
+      };
+    }
+
+    const resolvedImage = await resolveNewsImage({
+      imageUrl,
+      articleLink,
+    });
+    if (!resolvedImage && !(allowWithoutImage ?? false)) {
+      return {
+        posted: false,
+        skipped: true,
+        reason: "no_image",
+        link: articleLink,
+        chatId,
+        format: "text",
+        cta: CHANNEL_PUBLIC_URL,
+        credibilityScore: credibility.score,
       };
     }
 
@@ -98,23 +136,21 @@ export default defineTool({
       useQuote: useQuote ?? false,
     });
 
-    let result =
-      imageUrl
-        ? await sendTelegramPhoto({
-            token,
-            chatId,
-            photoUrl: imageUrl,
-            caption: caption.slice(0, 1024),
-          })
-        : await sendTelegramMessage({
-            token,
-            chatId,
-            text: caption,
-            disableWebPagePreview: true,
-          });
+    let result = resolvedImage
+      ? await sendTelegramPhoto({
+          token,
+          chatId,
+          photoUrl: resolvedImage,
+          caption: caption.slice(0, 1024),
+        })
+      : await sendTelegramMessage({
+          token,
+          chatId,
+          text: caption,
+          disableWebPagePreview: true,
+        });
 
-    // If photo URL fails, fall back to text-only so the cycle still publishes.
-    if (!result.ok && imageUrl) {
+    if (!result.ok && resolvedImage && (allowWithoutImage ?? false)) {
       result = await sendTelegramMessage({
         token,
         chatId,
@@ -129,8 +165,9 @@ export default defineTool({
         reason: result.error,
         link: articleLink,
         chatId,
-        format: imageUrl ? "photo" : "text",
+        format: resolvedImage ? "photo" : "text",
         cta: CHANNEL_PUBLIC_URL,
+        credibilityScore: credibility.score,
       };
     }
 
@@ -141,21 +178,20 @@ export default defineTool({
       emoji: reactionEmoji ?? "🔥",
     });
 
-    const record: PostedRecord = {
+    await rememberPosted(ctx.host.kv, {
       link: articleLink,
       title,
-      postedAt: new Date().toISOString(),
       messageId: result.messageId,
-    };
-    await ctx.host.kv.put(key, record);
+    });
 
     return {
       posted: true,
       messageId: result.messageId,
       chatId: result.chatId,
       link: articleLink,
-      format: imageUrl ? "photo" : "text",
+      format: resolvedImage ? "photo" : "text",
       cta: CHANNEL_PUBLIC_URL,
+      credibilityScore: credibility.score,
     };
   },
 });

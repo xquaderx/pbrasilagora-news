@@ -1,15 +1,11 @@
 ---
-cron: "0 */4 * * *"
+cron: "*/20 * * * *"
 ---
 
-Publique o próximo ciclo do canal **P Brasil Agora** (estilo Topor Live).
+Ciclo de 20 minutos do canal **P Brasil Agora**.
 
-1. Chame `fetch_brazil_news` (limit 12, includePosted false).
-2. Selecione até 3 matérias novas e relevantes para o Brasil.
-3. Para cada uma, chame `post_to_telegram` com:
-   - title + summary em PT-BR (skill `news-format`)
-   - `articleLink` da matéria (só dedupe — nunca no texto)
-   - `imageUrl` quando o feed trouxer
-   - sem qualquer URL no title/summary
-4. Responda com relatório: o que publicou / pulou.
-   Se não houver novidade, diga isso sem postar.
+1. `fetch_brazil_news` com limit 8, requireImage true.
+2. Pegue **1** matéria com `publishable: true` (tem imagem, não é duplicata, score ok).
+3. `check_news_credibility` nessa matéria.
+4. Se `publishable`, `post_to_telegram` com title/summary PT-BR, `articleLink`, `imageUrl`/`resolvedImageUrl`, source — sem URLs no texto.
+5. No máximo **1 post** por ciclo. Se nada passar nos filtros, não poste e diga o motivo.

@@ -1,7 +1,9 @@
 import { prompt } from "@cursor/bdk";
 import { defineTool } from "@cursor/bdk/tools";
 import { z } from "zod";
-import { postedKey } from "../lib/posted.js";
+import { assessCredibility } from "../lib/credibility.js";
+import { findDuplicate } from "../lib/dedupe.js";
+import { resolveNewsImage } from "../lib/image.js";
 import {
   BRAZIL_FEEDS,
   isFreshEnough,
@@ -10,40 +12,40 @@ import {
   type NewsItem,
 } from "../lib/rss.js";
 
+type FetchItem = NewsItem & {
+  alreadyPosted: boolean;
+  duplicateReason?: string;
+  credibilityScore: number;
+  publishable: boolean;
+  resolvedImageUrl: string | null;
+};
+
 type FetchResult = {
   fetchedAt: string;
   count: number;
-  items: Array<
-    NewsItem & {
-      alreadyPosted: boolean;
-    }
-  >;
+  items: FetchItem[];
   errors: Array<{ source: string; error: string }>;
 };
 
 export default defineTool({
   description: prompt`
-    Fetch recent Brazil-related news from Portuguese RSS feeds.
-    Use this before drafting channel posts. Returns titles, links,
-    short summaries, and whether each link was already posted.
+    Fetch recent Brazil news from Portuguese RSS feeds.
+    Resolves images, scores credibility, and marks duplicates.
+    Prefer items with resolvedImageUrl and publishable=true.
   `,
   effect: "read",
   inputSchema: z.object({
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(30)
-      .optional()
-      .describe("Max items to return after merge/dedupe. Default 12."),
-    includePosted: z
+    limit: z.number().int().min(1).max(30).optional(),
+    includePosted: z.boolean().optional(),
+    requireImage: z
       .boolean()
       .optional()
-      .describe("If true, include items already posted to Telegram. Default false."),
+      .describe("If true, only return items with an image. Default true."),
   }),
-  async execute({ limit, includePosted }, ctx): Promise<FetchResult> {
+  async execute({ limit, includePosted, requireImage }, ctx): Promise<FetchResult> {
     const max = limit ?? 12;
     const keepPosted = includePosted ?? false;
+    const mustImage = requireImage ?? true;
     const errors: FetchResult["errors"] = [];
     const byLink = new Map<string, NewsItem>();
 
@@ -58,10 +60,7 @@ export default defineTool({
             signal: AbortSignal.timeout(12_000),
           });
           if (!response.ok) {
-            errors.push({
-              source: feed.source,
-              error: `HTTP ${response.status}`,
-            });
+            errors.push({ source: feed.source, error: `HTTP ${response.status}` });
             return;
           }
           const xml = await response.text();
@@ -77,7 +76,6 @@ export default defineTool({
       }),
     );
 
-    // Round-robin by source so one feed cannot dominate the window.
     const bySource = new Map<string, NewsItem[]>();
     for (const item of byLink.values()) {
       if (!isFreshEnough(item.publishedAt)) continue;
@@ -90,6 +88,7 @@ export default defineTool({
         (a, b) => publishedSortKey(b.publishedAt) - publishedSortKey(a.publishedAt),
       );
     }
+
     const queues = [...bySource.values()];
     const interleaved: NewsItem[] = [];
     let progressed = true;
@@ -103,13 +102,39 @@ export default defineTool({
       }
     }
 
-    const annotated: FetchResult["items"] = [];
+    const annotated: FetchItem[] = [];
     for (const item of interleaved) {
-      const prior = await ctx.host.kv.get(postedKey(item.link));
-      const alreadyPosted = prior !== undefined;
-      if (alreadyPosted && !keepPosted) continue;
-      annotated.push({ ...item, alreadyPosted });
       if (annotated.length >= max) break;
+
+      const dedupe = await findDuplicate(ctx.host.kv, {
+        link: item.link,
+        title: item.title,
+      });
+      if (dedupe.duplicate && !keepPosted) continue;
+
+      const credibility = assessCredibility({
+        title: item.title,
+        summary: item.summary,
+        source: item.source,
+        articleLink: item.link,
+      });
+
+      const resolvedImageUrl = await resolveNewsImage({
+        imageUrl: item.imageUrl,
+        articleLink: item.link,
+      });
+      if (mustImage && !resolvedImageUrl) continue;
+      if (!credibility.ok && !keepPosted) continue;
+
+      annotated.push({
+        ...item,
+        imageUrl: resolvedImageUrl ?? item.imageUrl,
+        resolvedImageUrl,
+        alreadyPosted: dedupe.duplicate,
+        duplicateReason: dedupe.reason,
+        credibilityScore: credibility.score,
+        publishable: credibility.ok && !dedupe.duplicate && !!resolvedImageUrl,
+      });
     }
 
     return {

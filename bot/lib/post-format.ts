@@ -30,8 +30,11 @@ export function buildNewsCaption(input: {
     ? `<blockquote>${escapeHtml(summary)}</blockquote>`
     : escapeHtml(summary);
 
+  const engage =
+    "💬 Comente abaixo o que achou\n" +
+    "🔥 Deixe sua reação no post";
   const cta =
     `👉 <a href="${CHANNEL_PUBLIC_URL}">${escapeHtml(CHANNEL_CTA_LABEL)}</a>`;
 
-  return [headline, "", body, "", cta].join("\n");
+  return [headline, "", body, "", engage, cta].join("\n");
 }

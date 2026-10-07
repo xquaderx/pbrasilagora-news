@@ -14,6 +14,7 @@ import { buildNewsCaption } from "../bot/lib/post-format.js";
 import { isSimilarTitle } from "../bot/lib/posted.js";
 import {
   BRAZIL_FEEDS,
+  isAboutBrazil,
   isFreshEnough,
   parseRss,
   publishedSortKey,
@@ -207,6 +208,12 @@ async function fetchCandidates(): Promise<NewsItem[]> {
         });
         if (!response.ok) return;
         for (const item of parseRss(await response.text(), feed.source)) {
+          if (
+            feed.requireBrazilMention &&
+            !isAboutBrazil(item.title, item.summary)
+          ) {
+            continue;
+          }
           if (!byLink.has(item.link)) byLink.set(item.link, item);
         }
       } catch {

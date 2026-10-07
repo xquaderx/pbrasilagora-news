@@ -6,6 +6,7 @@ import { findDuplicate } from "../lib/dedupe.js";
 import { resolveNewsImage } from "../lib/image.js";
 import {
   BRAZIL_FEEDS,
+  isAboutBrazil,
   isFreshEnough,
   parseRss,
   publishedSortKey,
@@ -29,7 +30,7 @@ type FetchResult = {
 
 export default defineTool({
   description: prompt`
-    Fetch recent Brazil news from Portuguese RSS feeds.
+    Fetch recent news about Brazil — domestic and international coverage.
     Resolves images, scores credibility, and marks duplicates.
     Prefer items with resolvedImageUrl and publishable=true.
   `,
@@ -65,6 +66,12 @@ export default defineTool({
           }
           const xml = await response.text();
           for (const item of parseRss(xml, feed.source)) {
+            if (
+              feed.requireBrazilMention &&
+              !isAboutBrazil(item.title, item.summary)
+            ) {
+              continue;
+            }
             if (!byLink.has(item.link)) byLink.set(item.link, item);
           }
         } catch (err) {

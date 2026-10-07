@@ -1,29 +1,31 @@
 # brasil-noticias / P Brasil Agora
 
 Editor do canal Telegram **P Brasil Agora** (https://t.me/pbrasilagora):
-notícias do Brasil em PT-BR, estilo Topor Live, **sempre com imagem**.
+notícias sobre o **Brasil no Brasil e no exterior**, em PT-BR, estilo Topor,
+**sempre com imagem**.
+
+## Cobertura
+
+- Política, economia e fatos do Brasil (fontes nacionais)
+- Brasil no mundo / repercussão internacional (BBC, G1 Mundo, Folha Mundo)
+- Sem telejornais vazios, vídeos-resumo ou posts sem informação
 
 ## Fluxo (cada ciclo)
 
 1. `fetch_brazil_news` (requireImage true).
-2. Escolha 1 item `publishable: true`.
-3. `check_news_credibility` — só continue se `publishable: true`.
+2. Publique as matérias novas `publishable: true` (mais recentes primeiro).
+3. `check_news_credibility` antes de postar.
 4. `post_to_telegram` com imagem. Sem URL externa no texto.
-5. Não republicar duplicatas (link, título igual ou história parecida).
+5. Sem duplicatas (link / título / história parecida).
 
 ## Formato
 
 - Foto no topo
-- `⚡️` + título em negrito (+ fonte no nome, sem link)
-- Corpo curto factual
-- CTA só: `👉 P Brasil Agora. Inscrever-se`
+- `⚡️` + título (+ fonte pelo nome)
+- Corpo factual
+- Pedido automático: comentar + reagir
+- CTA: `👉 P Brasil Agora. Inscrever-se`
 - Reação 🔥 automática
-
-## Regras
-
-- Máx. 1 post por ciclo de 20 min
-- Pule fakes / fontes ruins / sem imagem / já postado
-- `articleLink` é só dedupe interno
 
 ## Memory
 

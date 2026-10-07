@@ -5,8 +5,10 @@ export async function resolveNewsImage(input: {
   imageUrl?: string | null;
   articleLink: string;
 }): Promise<string | null> {
-  if (input.imageUrl && isLikelyImageUrl(input.imageUrl)) {
-    return absoluteUrl(input.imageUrl, input.articleLink);
+  const candidates: string[] = [];
+  if (input.imageUrl) {
+    const abs = absoluteUrl(input.imageUrl, input.articleLink);
+    if (abs) candidates.push(abs);
   }
 
   try {
@@ -15,13 +17,40 @@ export async function resolveNewsImage(input: {
       signal: AbortSignal.timeout(10_000),
       redirect: "follow",
     });
-    if (!response.ok) return null;
-    const html = await response.text();
-    const fromMeta = pickMetaImage(html);
-    if (!fromMeta) return null;
-    return absoluteUrl(fromMeta, input.articleLink);
+    if (response.ok) {
+      const html = await response.text();
+      const fromMeta = pickMetaImage(html);
+      const abs = fromMeta ? absoluteUrl(fromMeta, input.articleLink) : null;
+      if (abs) candidates.push(abs);
+    }
   } catch {
-    return null;
+    // ignore page fetch errors
+  }
+
+  for (const url of candidates) {
+    if (!isLikelyImageUrl(url)) continue;
+    if (await urlServesImage(url)) return url;
+  }
+  return null;
+}
+
+async function urlServesImage(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      headers: { "user-agent": UA },
+      signal: AbortSignal.timeout(8_000),
+      redirect: "follow",
+    });
+    if (!response.ok) return false;
+    const finalUrl = response.url || url;
+    if (/\.(ghtml|html|htm)(\?|$)/i.test(finalUrl)) return false;
+    const type = (response.headers.get("content-type") ?? "").toLowerCase();
+    if (type.startsWith("image/")) return true;
+    // Some CDNs block HEAD; allow known image URL shapes after redirect check.
+    return isLikelyImageUrl(finalUrl);
+  } catch {
+    return isLikelyImageUrl(url);
   }
 }
 

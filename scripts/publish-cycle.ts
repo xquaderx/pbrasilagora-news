@@ -224,12 +224,8 @@ async function fetchCandidates(): Promise<NewsItem[]> {
         });
         if (!response.ok) return;
         for (const item of parseRss(await readFeedText(response), feed.source)) {
-          if (
-            feed.requireBrazilMention &&
-            !isAboutBrazil(item.title, item.summary)
-          ) {
-            continue;
-          }
+          // Always keep Brazil-only stories (domestic + international).
+          if (!isAboutBrazil(item.title, item.summary)) continue;
           if (!byLink.has(item.link)) byLink.set(item.link, item);
         }
       } catch {

@@ -67,12 +67,8 @@ export default defineTool({
           }
           const xml = await readFeedText(response);
           for (const item of parseRss(xml, feed.source)) {
-            if (
-              feed.requireBrazilMention &&
-              !isAboutBrazil(item.title, item.summary)
-            ) {
-              continue;
-            }
+            // Always keep Brazil-only stories (domestic + international).
+            if (!isAboutBrazil(item.title, item.summary)) continue;
             if (!byLink.has(item.link)) byLink.set(item.link, item);
           }
         } catch (err) {

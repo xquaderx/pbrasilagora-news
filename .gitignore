@@ -4,3 +4,4 @@ node_modules
 .agent-serve
 memory
 data/posted-kv.json
+logs/

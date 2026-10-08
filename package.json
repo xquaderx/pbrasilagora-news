@@ -8,7 +8,8 @@
     "dev": "bdk dev",
     "validate": "bdk validate --dir .",
     "eval": "bdk eval --dir .",
-    "publish:once": "tsx scripts/publish-cycle.ts"
+    "publish:once": "tsx scripts/publish-cycle.ts",
+    "publish:forever": "bash scripts/run-forever.sh"
   },
   "dependencies": {
     "@cursor/bdk": "^0.2.21",

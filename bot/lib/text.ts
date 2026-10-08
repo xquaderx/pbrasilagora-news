@@ -56,15 +56,18 @@ export function stripReadMoreBoilerplate(text: string): string {
       "",
     )
     // Tailwind / leftover HTML attribute junk from bad scrapes.
-    .replace(/\b(?:class|aria|svg|href|src|data|role)=["'][^"']*["']/gi, " ")
-    .replace(/\b(?:class|aria|svg|href|src|data|role)=[^\s>]+/gi, " ")
+    .replace(/\b(?:class|aria-[a-z]+|aria|svg|href|src|data-[a-z0-9_-]+|role)=["'][^"']*["']/gi, " ")
+    .replace(/\b(?:class|aria-[a-z]+|aria|svg|href|src|data-[a-z0-9_-]+|role)=[^\s>"']+/gi, " ")
     .replace(
       /\b(?:rounded|gap|mx|my|px|py|flex|grid|items|justify|w|h|text|bg|border|col|row|sm|md|lg|xl)-[a-z0-9./:[\]%-]+/gi,
       " ",
     )
-    .replace(/\]:>/g, " ")
-    .replace(/Menu\s+svg/gi, " ")
+    .replace(/\]:?-*/g, " ")
+    .replace(/["']\s*>/g, " ")
+    .replace(/Menu\s*svg/gi, " ")
     .replace(/Abrir notifica[cç][oõ]es/gi, " ")
+    .replace(/Você quer ficar por dentro[\s\S]*$/i, "")
+    .replace(/Voce quer ficar por dentro[\s\S]*$/i, "")
     .replace(/\(\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]?\s*\d{1,2}h\d{0,2}\s*\)/gi, "")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]\s*\d{1,2}h\d{0,2}\b/gi, "")
     .replace(/\s{2,}/g, " ")
@@ -101,7 +104,7 @@ export function stripHtml(text: string): string {
 
 /** Final cleanup before publishing to Telegram. */
 export function sanitizePostText(text: string): string {
-  return stripReadMoreBoilerplate(
+  const cleaned = stripReadMoreBoilerplate(
     decodeEntities(text)
       .replace(/\uFFFD/g, "")
       .replace(/https?:\/\/\S+/gi, "")
@@ -110,4 +113,5 @@ export function sanitizePostText(text: string): string {
       .replace(/\s+([,.!?;:])/g, "$1")
       .trim(),
   );
+  return looksLikeUiJunk(cleaned) ? "" : cleaned;
 }

@@ -6,8 +6,9 @@ notícias sobre o **Brasil no Brasil e no exterior**, em PT-BR, estilo Topor,
 
 ## Cobertura
 
-- Política, economia e fatos do Brasil (fontes nacionais)
-- Brasil no mundo / repercussão internacional (BBC, G1 Mundo, Folha Mundo)
+- Brasil por dentro: G1, Agência Brasil, Folha, CNN, Estadão, Metrópoles
+- Linha crítica/oposição: Gazeta do Povo, Revista Oeste, Jovem Pan, Veja, Poder360, Crusoé
+- Mundo sobre o Brasil: BBC, El País, Guardian, France 24, NYT Americas, G1/Folha Mundo
 - Sem telejornais vazios, vídeos-resumo ou posts sem informação
 
 ## Fluxo (cada ciclo)

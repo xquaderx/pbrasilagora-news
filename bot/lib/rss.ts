@@ -141,7 +141,7 @@ export type BrazilFeed = {
 };
 
 export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
-  // Inside Brazil
+  // Mainstream BR
   {
     source: "G1 Política",
     url: "https://g1.globo.com/rss/g1/politica/",
@@ -162,10 +162,54 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     source: "CNN Brasil",
     url: "https://www.cnnbrasil.com.br/feed/",
   },
-  // Outside / world angle on Brazil
+  {
+    source: "Estadão",
+    url: "https://www.estadao.com.br/arc/outboundfeeds/rss/?outputType=xml",
+  },
+  {
+    source: "Metrópoles",
+    url: "https://www.metropoles.com/feed",
+  },
+
+  // Opposition / critical BR outlets
+  {
+    source: "Gazeta do Povo",
+    url: "https://www.gazetadopovo.com.br/feed/rss/republica.xml",
+  },
+  {
+    source: "Gazeta Economia",
+    url: "https://www.gazetadopovo.com.br/feed/rss/economia.xml",
+  },
+  {
+    source: "Revista Oeste",
+    url: "https://revistaoeste.com/feed/",
+  },
+  {
+    source: "Jovem Pan",
+    url: "https://jovempan.com.br/feed/",
+  },
+  {
+    source: "Veja",
+    url: "https://veja.abril.com.br/feed/",
+  },
+  {
+    source: "Poder360",
+    url: "https://www.poder360.com.br/feed/",
+  },
+  {
+    source: "Crusoé",
+    url: "https://crusoe.com.br/feed/",
+  },
+
+  // World media (Brazil angle)
   {
     source: "BBC Brasil",
     url: "https://feeds.bbci.co.uk/portuguese/rss.xml",
+    requireBrazilMention: true,
+  },
+  {
+    source: "El País Brasil",
+    url: "https://feeds.elpais.com/mrss-s/pages/ep/site/brasil.elpais.com/portada",
     requireBrazilMention: true,
   },
   {
@@ -178,6 +222,26 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     url: "https://feeds.folha.uol.com.br/mundo/rss091.xml",
     requireBrazilMention: true,
   },
+  {
+    source: "The Guardian",
+    url: "https://www.theguardian.com/world/brazil/rss",
+    requireBrazilMention: true,
+  },
+  {
+    source: "BBC Latin America",
+    url: "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml",
+    requireBrazilMention: true,
+  },
+  {
+    source: "France 24",
+    url: "https://www.france24.com/en/americas/rss",
+    requireBrazilMention: true,
+  },
+  {
+    source: "NYT Americas",
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/Americas.xml",
+    requireBrazilMention: true,
+  },
 ];
 
 /** True when the story is about Brazil (domestic or abroad). */
@@ -187,15 +251,38 @@ export function isAboutBrazil(title: string, summary: string): boolean {
     /\bbrasil\b/i.test(text) ||
     /\bbrazil\b/i.test(text) ||
     /\bbrasileir[oa]s?\b/i.test(text) ||
+    /\bbrazilian/i.test(text) ||
     /\bbrasília\b|\brasilia\b/i.test(text) ||
     /\bsão paulo\b|\bsao paulo\b/i.test(text) ||
     /\bplanalto\b/i.test(text) ||
     /\b(stf|stj|tse|tcu)\b/i.test(text) ||
     /\b(lula|bolsonaro|janja)\b/i.test(text) ||
-    /\bbanco central\b/i.test(text) ||
+    /\bbanco central\b|\bcentral bank of brazil\b/i.test(text) ||
     /\bitamaraty\b/i.test(text) ||
-    /\bamason(ia|as)?\b/i.test(text)
+    /\bamason(ia|as)?\b|\bamazon\b/i.test(text)
   );
+}
+
+/** Heuristic: body looks like Portuguese (channel language). */
+export function looksPortuguese(text: string): boolean {
+  if (/[áàâãéêíóôõúç]/i.test(text)) return true;
+  return /\b(não|também|após|você|estão|política|governo|eleição|eleições|brasil)\b/i.test(
+    text,
+  );
+}
+
+/** Prepare title/summary for the PT channel when source is foreign-language. */
+export function localizeForChannel(input: {
+  title: string;
+  summary: string;
+}): { title: string; summary: string } {
+  const blob = `${input.title}\n${input.summary}`;
+  if (looksPortuguese(blob)) return input;
+  return {
+    title: input.title,
+    summary:
+      `Repercussão internacional sobre o Brasil. ${input.summary}`.slice(0, 500),
+  };
 }
 
 /** Prefer recent items; drop entries older than maxAgeMs when date parses. */

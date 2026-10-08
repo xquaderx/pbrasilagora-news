@@ -16,6 +16,7 @@ import {
   BRAZIL_FEEDS,
   isAboutBrazil,
   isFreshEnough,
+  localizeForChannel,
   parseRss,
   publishedSortKey,
   readFeedText,
@@ -100,11 +101,15 @@ async function main(): Promise<void> {
     });
     if (!imageUrl) continue;
 
+    const localized = localizeForChannel({
+      title: item.title,
+      summary: item.summary.slice(0, 420),
+    });
     candidates.push({
-      item,
+      item: { ...item, title: localized.title, summary: localized.summary },
       score: credibility.score,
       imageUrl,
-      summary: item.summary.slice(0, 420),
+      summary: localized.summary,
     });
   }
 

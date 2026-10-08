@@ -13,7 +13,7 @@ import { createFileKv } from "../bot/lib/file-kv.js";
 import { resolveNewsImage } from "../bot/lib/image.js";
 import { buildNewsCaption } from "../bot/lib/post-format.js";
 import { isSimilarTitle } from "../bot/lib/posted.js";
-import { sanitizePostText } from "../bot/lib/text.js";
+import { looksLikeUiJunk, sanitizePostText } from "../bot/lib/text.js";
 import {
   BRAZIL_FEEDS,
   isAboutBrazil,
@@ -113,6 +113,9 @@ async function main(): Promise<void> {
       summary: sanitizePostText(fullSummary),
     });
     if (localized.summary.length < 80) continue;
+    if (looksLikeUiJunk(localized.title) || looksLikeUiJunk(localized.summary)) {
+      continue;
+    }
 
     candidates.push({
       item: { ...item, title: localized.title, summary: localized.summary },

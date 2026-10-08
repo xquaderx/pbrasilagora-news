@@ -43,17 +43,46 @@ export function decodeEntities(text: string): string {
   return cur;
 }
 
-/** Remove "read more" tails and site chrome — the channel must be self-contained. */
+/** Remove "read more", site CTAs and scraped UI chrome. */
 export function stripReadMoreBoilerplate(text: string): string {
   return text
+    // Cut from first site CTA / notification prompt onward.
+    .replace(
+      /\b(ative\s+nossas\s+notifica|quero\s+receber\s+notifica|receber\s+notifica|inscreva-se|assine\s+a\s+newsletter|cadastre-se|clique\s+aqui|acesse\s+aqui|veja\s+também|veja\s+tambem|relacionadas?|publicidade|anúncio|anuncio)\b[\s\S]*$/i,
+      "",
+    )
     .replace(
       /\b(leia\s+mais|continue\s+lendo|saiba\s+mais|leia\s+a\s+matéria|leia\s+a\s+materia|ler\s+mais|read\s+more|click\s+here)\b[\s\S]*$/i,
       "",
     )
+    // Tailwind / leftover HTML attribute junk from bad scrapes.
+    .replace(/\b(?:class|aria|svg|href|src|data|role)=["'][^"']*["']/gi, " ")
+    .replace(/\b(?:class|aria|svg|href|src|data|role)=[^\s>]+/gi, " ")
+    .replace(
+      /\b(?:rounded|gap|mx|my|px|py|flex|grid|items|justify|w|h|text|bg|border|col|row|sm|md|lg|xl)-[a-z0-9./:[\]%-]+/gi,
+      " ",
+    )
+    .replace(/\]:>/g, " ")
+    .replace(/Menu\s+svg/gi, " ")
+    .replace(/Abrir notifica[cç][oõ]es/gi, " ")
     .replace(/\(\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]?\s*\d{1,2}h\d{0,2}\s*\)/gi, "")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]\s*\d{1,2}h\d{0,2}\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+/** True when text looks like scraped UI / CSS, not journalism. */
+export function looksLikeUiJunk(text: string): boolean {
+  if (/aria-|class=|svg]|rounded-|gap-|flex |items-|justify-/i.test(text)) {
+    return true;
+  }
+  if (/ative nossas notifica|receber notifica|abrir notifica/i.test(text)) {
+    return true;
+  }
+  if ((text.match(/[-:]/g) ?? []).length > 12 && /\b(mx|px|gap|rounded)\b/i.test(text)) {
+    return true;
+  }
+  return false;
 }
 
 export function stripHtml(text: string): string {
@@ -61,6 +90,9 @@ export function stripHtml(text: string): string {
     decodeEntities(text)
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+      .replace(/<!--[\s\S]*?-->/g, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim(),
@@ -71,8 +103,9 @@ export function stripHtml(text: string): string {
 export function sanitizePostText(text: string): string {
   return stripReadMoreBoilerplate(
     decodeEntities(text)
-      .replace(/\uFFFD/g, "") // drop replacement chars if any slipped through
+      .replace(/\uFFFD/g, "")
       .replace(/https?:\/\/\S+/gi, "")
+      .replace(/www\.\S+/gi, "")
       .replace(/\s{2,}/g, " ")
       .replace(/\s+([,.!?;:])/g, "$1")
       .trim(),

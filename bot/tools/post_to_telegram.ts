@@ -1,10 +1,12 @@
 import { prompt } from "@cursor/bdk";
 import { defineTool } from "@cursor/bdk/tools";
 import { z } from "zod";
+import { buildFullSummary } from "../lib/article.js";
 import { assessCredibility } from "../lib/credibility.js";
 import { findDuplicate, rememberPosted } from "../lib/dedupe.js";
 import { resolveNewsImage } from "../lib/image.js";
 import { buildNewsCaption, CHANNEL_PUBLIC_URL } from "../lib/post-format.js";
+import { sanitizePostText } from "../lib/text.js";
 import {
   seedMessageReaction,
   sendTelegramMessage,
@@ -129,10 +131,15 @@ export default defineTool({
       };
     }
 
+    const fullSummary = await buildFullSummary({
+      rssSummary: summary,
+      articleLink,
+      maxLen: 700,
+    });
     const caption = buildNewsCaption({
-      title,
-      summary,
-      source,
+      title: sanitizePostText(title),
+      summary: sanitizePostText(fullSummary),
+      source: source ? sanitizePostText(source) : undefined,
       useQuote: useQuote ?? false,
     });
 

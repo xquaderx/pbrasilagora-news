@@ -1,3 +1,5 @@
+import { decodeEntities, stripHtml, stripReadMoreBoilerplate } from "./text.js";
+
 export type NewsItem = {
   id: string;
   title: string;
@@ -8,25 +10,6 @@ export type NewsItem = {
   imageUrl: string | null;
 };
 
-function decodeXml(text: string): string {
-  return text
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
-    .replace(/&#(\d+);/g, (_, n) => {
-      const code = Number(n);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : _;
-    })
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
-      const code = Number.parseInt(h, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : _;
-    })
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'");
-}
-
 /** Decode RSS body using XML/HTTP charset (Folha is often ISO-8859-1). */
 export async function readFeedText(response: Response): Promise<string> {
   const buf = Buffer.from(await response.arrayBuffer());
@@ -35,19 +18,15 @@ export async function readFeedText(response: Response): Promise<string> {
     "";
   const head = buf.subarray(0, 400).toString("latin1");
   const xmlCs = head.match(/encoding=["']([^"']+)["']/i)?.[1] ?? "";
-  const charset = (xmlCs || httpCs || "utf-8").replace(/utf8/i, "utf-8");
+  const raw = (xmlCs || httpCs || "utf-8").trim().toLowerCase();
+  if (raw.includes("8859-1") || raw.includes("latin")) {
+    return buf.toString("latin1");
+  }
   try {
-    return new TextDecoder(charset as BufferEncoding).decode(buf);
+    return new TextDecoder("utf-8").decode(buf);
   } catch {
     return buf.toString("utf8");
   }
-}
-
-function stripHtml(text: string): string {
-  return decodeXml(text)
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function tagContent(block: string, tag: string): string | null {
@@ -56,7 +35,7 @@ function tagContent(block: string, tag: string): string | null {
     "i",
   );
   const match = block.match(re);
-  return match ? decodeXml(match[1]!).trim() : null;
+  return match ? decodeEntities(match[1]!).trim() : null;
 }
 
 function unwrapRedirectLink(link: string): string {
@@ -106,6 +85,7 @@ export function parseRss(xml: string, source: string): NewsItem[] {
     if (!title || !link) continue;
 
     const summaryRaw =
+      tagContent(block, "content:encoded") ??
       tagContent(block, "description") ??
       tagContent(block, "summary") ??
       tagContent(block, "content") ??
@@ -118,9 +98,9 @@ export function parseRss(xml: string, source: string): NewsItem[] {
 
     items.push({
       id: link,
-      title,
+      title: stripReadMoreBoilerplate(title),
       link,
-      summary: stripHtml(summaryRaw).slice(0, 500),
+      summary: stripReadMoreBoilerplate(stripHtml(summaryRaw)).slice(0, 900),
       publishedAt,
       source,
       imageUrl: imageFromItem(block),

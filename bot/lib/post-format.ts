@@ -1,16 +1,8 @@
 import { escapeHtml } from "./telegram.js";
+import { sanitizePostText } from "./text.js";
 
 export const CHANNEL_PUBLIC_URL = "https://t.me/pbrasilagora";
 export const CHANNEL_CTA_LABEL = "P Brasil Agora. Inscrever-se";
-
-/** Strip http(s) URLs so posts never leak external links. */
-export function stripExternalUrls(text: string): string {
-  return text
-    .replace(/https?:\/\/\S+/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+([,.!?;:])/g, "$1")
-    .trim();
-}
 
 export function buildNewsCaption(input: {
   title: string;
@@ -18,9 +10,9 @@ export function buildNewsCaption(input: {
   source?: string;
   useQuote?: boolean;
 }): string {
-  const title = stripExternalUrls(input.title);
-  const summary = stripExternalUrls(input.summary);
-  const source = input.source ? stripExternalUrls(input.source) : undefined;
+  const title = sanitizePostText(input.title);
+  const summary = sanitizePostText(input.summary);
+  const source = input.source ? sanitizePostText(input.source) : undefined;
 
   const headline = source
     ? `⚡️ <b>${escapeHtml(title)} — ${escapeHtml(source)}</b>`

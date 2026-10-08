@@ -6,12 +6,14 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { buildFullSummary } from "../bot/lib/article.js";
 import { assessCredibility } from "../bot/lib/credibility.js";
 import { findDuplicate, rememberPosted } from "../bot/lib/dedupe.js";
 import { createFileKv } from "../bot/lib/file-kv.js";
 import { resolveNewsImage } from "../bot/lib/image.js";
 import { buildNewsCaption } from "../bot/lib/post-format.js";
 import { isSimilarTitle } from "../bot/lib/posted.js";
+import { sanitizePostText } from "../bot/lib/text.js";
 import {
   BRAZIL_FEEDS,
   isAboutBrazil,
@@ -101,10 +103,17 @@ async function main(): Promise<void> {
     });
     if (!imageUrl) continue;
 
-    const localized = localizeForChannel({
-      title: item.title,
-      summary: item.summary.slice(0, 420),
+    const fullSummary = await buildFullSummary({
+      rssSummary: item.summary,
+      articleLink: item.link,
+      maxLen: 700,
     });
+    const localized = localizeForChannel({
+      title: sanitizePostText(item.title),
+      summary: sanitizePostText(fullSummary),
+    });
+    if (localized.summary.length < 80) continue;
+
     candidates.push({
       item: { ...item, title: localized.title, summary: localized.summary },
       score: credibility.score,

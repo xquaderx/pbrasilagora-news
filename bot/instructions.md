@@ -6,9 +6,11 @@ notícias sobre o **Brasil no Brasil e no exterior**, em PT-BR, estilo Topor,
 
 ## Cobertura
 
-- Brasil por dentro: G1, Agência Brasil, Folha, CNN, Estadão, Metrópoles
-- Linha crítica/oposição: Gazeta do Povo, Revista Oeste, Jovem Pan, Veja, Poder360, Crusoé
-- Mundo sobre o Brasil: BBC, El País, Guardian, France 24, NYT Americas, G1/Folha Mundo
+- Brasil por dentro: Agência Brasil, Folha, Estadão, Metrópoles, Nexo, Carta Capital
+- Economia: InfoMoney, Money Times, Exame
+- Linha crítica/oposição: Gazeta do Povo, Revista Oeste, Jovem Pan, O Antagonista, Poder360, Crusoé, Brasil 247
+- Mundo sobre o Brasil: BBC, El País, DW, Guardian, France 24, NYT Americas, Folha Mundo
+- Sem Globo/G1, CNN Brasil e Veja
 - Sem telejornais vazios, vídeos-resumo ou posts sem informação
 
 ## Fluxo (cada ciclo)

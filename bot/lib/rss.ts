@@ -121,15 +121,7 @@ export type BrazilFeed = {
 };
 
 export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
-  // Mainstream BR
-  {
-    source: "G1 Política",
-    url: "https://g1.globo.com/rss/g1/politica/",
-  },
-  {
-    source: "G1 Economia",
-    url: "https://g1.globo.com/rss/g1/economia/",
-  },
+  // Mainstream BR (sem Globo / CNN / Veja)
   {
     source: "Agência Brasil",
     url: "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml",
@@ -139,10 +131,6 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     url: "https://feeds.folha.uol.com.br/poder/rss091.xml",
   },
   {
-    source: "CNN Brasil",
-    url: "https://www.cnnbrasil.com.br/feed/",
-  },
-  {
     source: "Estadão",
     url: "https://www.estadao.com.br/arc/outboundfeeds/rss/?outputType=xml",
   },
@@ -150,8 +138,30 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     source: "Metrópoles",
     url: "https://www.metropoles.com/feed",
   },
+  {
+    source: "Nexo",
+    url: "https://www.nexojornal.com.br/rss.xml",
+  },
+  {
+    source: "Carta Capital",
+    url: "https://www.cartacapital.com.br/feed/",
+  },
 
-  // Opposition / critical BR outlets
+  // Economia (substitui G1 Economia / CNN)
+  {
+    source: "InfoMoney",
+    url: "https://www.infomoney.com.br/feed/",
+  },
+  {
+    source: "Money Times",
+    url: "https://www.moneytimes.com.br/feed/",
+  },
+  {
+    source: "Exame",
+    url: "https://exame.com/feed/",
+  },
+
+  // Oposição / crítica
   {
     source: "Gazeta do Povo",
     url: "https://www.gazetadopovo.com.br/feed/rss/republica.xml",
@@ -169,8 +179,8 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     url: "https://jovempan.com.br/feed/",
   },
   {
-    source: "Veja",
-    url: "https://veja.abril.com.br/feed/",
+    source: "O Antagonista",
+    url: "https://oantagonista.com.br/feed/",
   },
   {
     source: "Poder360",
@@ -180,8 +190,12 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     source: "Crusoé",
     url: "https://crusoe.com.br/feed/",
   },
+  {
+    source: "Brasil 247",
+    url: "https://www.brasil247.com/feed",
+  },
 
-  // World media (Brazil angle)
+  // Mundo sobre o Brasil (sem G1 Mundo)
   {
     source: "BBC Brasil",
     url: "https://feeds.bbci.co.uk/portuguese/rss.xml",
@@ -193,8 +207,8 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     requireBrazilMention: true,
   },
   {
-    source: "G1 Mundo",
-    url: "https://g1.globo.com/rss/g1/mundo/",
+    source: "DW Brasil",
+    url: "https://rss.dw.com/xml/rss-br-all",
     requireBrazilMention: true,
   },
   {

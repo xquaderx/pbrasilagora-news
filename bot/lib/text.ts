@@ -70,7 +70,9 @@ export function stripReadMoreBoilerplate(text: string): string {
     .replace(/Voce quer ficar por dentro[\s\S]*$/i, "")
     .replace(/\(\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]?\s*\d{1,2}h\d{0,2}\s*\)/gi, "")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]\s*\d{1,2}h\d{0,2}\b/gi, "")
+    .replace(/[<>]{1,}/g, " ")
     .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.!?;:])/g, "$1")
     .trim();
 }
 

@@ -118,6 +118,8 @@ export type BrazilFeed = {
    * (for world/international feeds covering Brazil from outside).
    */
   requireBrazilMention?: boolean;
+  /** Light entertainment / culture / music / cinema. */
+  kind?: "news" | "entertainment";
 };
 
 export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
@@ -195,6 +197,18 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     url: "https://www.brasil247.com/feed",
   },
 
+  // Entretenimento (poucos, leves)
+  {
+    source: "POPLine",
+    url: "https://portalpopline.com.br/feed/",
+    kind: "entertainment",
+  },
+  {
+    source: "Cinema com Rapadura",
+    url: "https://cinemacomrapadura.com.br/feed/",
+    kind: "entertainment",
+  },
+
   // Mundo sobre o Brasil (sem G1 Mundo)
   {
     source: "BBC Brasil",
@@ -237,6 +251,12 @@ export const BRAZIL_FEEDS: ReadonlyArray<BrazilFeed> = [
     requireBrazilMention: true,
   },
 ];
+
+export function isEntertainmentSource(source: string): boolean {
+  return BRAZIL_FEEDS.some(
+    (f) => f.source === source && f.kind === "entertainment",
+  );
+}
 
 /** True when the story is about Brazil (domestic or abroad). */
 export function isAboutBrazil(title: string, summary: string): boolean {

@@ -33,6 +33,8 @@ const TRUSTED_SOURCES = new Set([
   "crusoé",
   "crusoe",
   "brasil 247",
+  "popline",
+  "cinema com rapadura",
   "el país brasil",
   "el pais brasil",
   "dw brasil",
@@ -85,19 +87,6 @@ const LOW_INFO_PATTERNS = [
   /\bsensitiva\b/i,
   /\bhoróscopo\b/i,
   /\bastroloy|\bastrolog/i,
-  /\bveja fotos\b/i,
-  /\bnovela\b/i,
-  /\bbb?b\b/i,
-  /\bfamosos?\b/i,
-  /\bcelebridad/i,
-  /\bcelebrities\b/i,
-  /\bmansão\b|\bmansao\b/i,
-  /\bbastidores da festa\b/i,
-  /\blooks?\b/i,
-  /\breality\b/i,
-  /\bmasterchef\b/i,
-  /\ba fazenda\b/i,
-  /\bcoluna social\b/i,
   /\bplacar ao vivo\b/i,
   /\bpalpites?\b/i,
   /\bodds\b/i,
@@ -111,6 +100,23 @@ const LOW_INFO_PATTERNS = [
   /\bsábado,?\s+\d/i,
   /\bsabado,?\s+\d/i,
   /\bdomingo,?\s+\d/i,
+];
+
+/** Reject on hard-news feeds only — allowed for entertainment sources. */
+const NEWS_ONLY_LOW_INFO = [
+  /\bveja fotos\b/i,
+  /\bnovela\b/i,
+  /\bbb?b\b/i,
+  /\bfamosos?\b/i,
+  /\bcelebridad/i,
+  /\bcelebrities\b/i,
+  /\bmansão\b|\bmansao\b/i,
+  /\bbastidores da festa\b/i,
+  /\blooks?\b/i,
+  /\breality\b/i,
+  /\bmasterchef\b/i,
+  /\ba fazenda\b/i,
+  /\bcoluna social\b/i,
 ];
 
 const FAKE_PHRASES = [
@@ -133,6 +139,7 @@ export function assessCredibility(input: {
   summary: string;
   source?: string;
   articleLink: string;
+  entertainment?: boolean;
 }): CredibilityResult {
   const reasons: string[] = [];
   let score = 50;
@@ -142,6 +149,7 @@ export function assessCredibility(input: {
   const summary = input.summary.trim();
   const text = `${title}\n${summary}`;
   const path = safePath(input.articleLink);
+  const entertainment = input.entertainment === true;
 
   let sourceTier: CredibilityResult["sourceTier"] = "unknown";
   if (TRUSTED_SOURCES.has(sourceNorm)) {
@@ -176,6 +184,15 @@ export function assessCredibility(input: {
       score -= 55;
       reasons.push(`baixa_info:${re.source}`);
       break;
+    }
+  }
+  if (!entertainment) {
+    for (const re of NEWS_ONLY_LOW_INFO) {
+      if (re.test(text)) {
+        score -= 55;
+        reasons.push(`baixa_info_news:${re.source}`);
+        break;
+      }
     }
   }
 
@@ -278,6 +295,8 @@ function hostMatchesTrusted(host: string): boolean {
     "poder360.com.br",
     "crusoe.com.br",
     "brasil247.com",
+    "portalpopline.com.br",
+    "cinemacomrapadura.com.br",
     "elpais.com",
     "brasil.elpais.com",
     "dw.com",

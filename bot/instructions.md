@@ -10,6 +10,7 @@ notícias sobre o **Brasil no Brasil e no exterior**, em PT-BR, estilo Topor,
 - Economia: InfoMoney, Money Times, Exame
 - Linha crítica/oposição: Gazeta do Povo, Revista Oeste, Jovem Pan, O Antagonista, Poder360, Crusoé, Brasil 247
 - Mundo sobre o Brasil: BBC, El País, DW, Guardian, France 24, NYT Americas, Folha Mundo
+- Entretenimento (leve): POPLine, Cinema com Rapadura
 - Sem Globo/G1, CNN Brasil e Veja
 - Sem telejornais vazios, vídeos-resumo ou posts sem informação
 

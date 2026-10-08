@@ -17,6 +17,7 @@ import { looksLikeUiJunk, sanitizePostText } from "../bot/lib/text.js";
 import {
   BRAZIL_FEEDS,
   isAboutBrazil,
+  isEntertainmentSource,
   isFreshEnough,
   localizeForChannel,
   parseRss,
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
       summary: item.summary,
       source: item.source,
       articleLink: item.link,
+      entertainment: isEntertainmentSource(item.source),
     });
     if (!credibility.ok) continue;
 
@@ -227,8 +229,11 @@ async function fetchCandidates(): Promise<NewsItem[]> {
         });
         if (!response.ok) return;
         for (const item of parseRss(await readFeedText(response), feed.source)) {
-          // Always keep Brazil-only stories (domestic + international).
-          if (!isAboutBrazil(item.title, item.summary)) continue;
+          const entertainment = feed.kind === "entertainment";
+          // Hard-news feeds: Brazil only. Entertainment feeds: BR culture/pop.
+          if (!entertainment && !isAboutBrazil(item.title, item.summary)) {
+            continue;
+          }
           if (!byLink.has(item.link)) byLink.set(item.link, item);
         }
       } catch {

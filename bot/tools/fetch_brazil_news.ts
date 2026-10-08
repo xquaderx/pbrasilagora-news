@@ -7,6 +7,7 @@ import { resolveNewsImage } from "../lib/image.js";
 import {
   BRAZIL_FEEDS,
   isAboutBrazil,
+  isEntertainmentSource,
   isFreshEnough,
   parseRss,
   publishedSortKey,
@@ -67,8 +68,10 @@ export default defineTool({
           }
           const xml = await readFeedText(response);
           for (const item of parseRss(xml, feed.source)) {
-            // Always keep Brazil-only stories (domestic + international).
-            if (!isAboutBrazil(item.title, item.summary)) continue;
+            const entertainment = feed.kind === "entertainment";
+            if (!entertainment && !isAboutBrazil(item.title, item.summary)) {
+              continue;
+            }
             if (!byLink.has(item.link)) byLink.set(item.link, item);
           }
         } catch (err) {
@@ -121,6 +124,7 @@ export default defineTool({
         summary: item.summary,
         source: item.source,
         articleLink: item.link,
+        entertainment: isEntertainmentSource(item.source),
       });
 
       const resolvedImageUrl = await resolveNewsImage({

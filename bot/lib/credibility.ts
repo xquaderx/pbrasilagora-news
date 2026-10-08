@@ -80,6 +80,11 @@ const LOW_INFO_PATTERNS = [
   /\bsensitiva\b/i,
   /\bhoróscopo\b/i,
   /\bastroloy|\bastrolog/i,
+  /\bveja fotos\b/i,
+  /\bnovela\b/i,
+  /\bbb?b\b/i,
+  /\bfamosos?\b/i,
+  /\bcelebridad/i,
   /\bquarta-feira,?\s+\d/i, // "MG2, quarta-feira, 7 de outubro..."
   /\bsegunda-feira,?\s+\d/i,
   /\bterça-feira,?\s+\d/i,

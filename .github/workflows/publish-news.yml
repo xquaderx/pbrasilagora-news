@@ -39,5 +39,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
-          MAX_POSTS_PER_CYCLE: "5"
+          MAX_POSTS_PER_CYCLE: "2"
         run: npm run publish:once

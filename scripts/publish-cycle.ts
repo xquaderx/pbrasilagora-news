@@ -130,7 +130,8 @@ async function main(): Promise<void> {
     return b.score - a.score;
   });
 
-  const maxPerCycle = Number(process.env.MAX_POSTS_PER_CYCLE ?? "5");
+  // Keep the channel readable: a few strong posts, not a flood.
+  const maxPerCycle = Number(process.env.MAX_POSTS_PER_CYCLE ?? "2");
   let posted = 0;
   let failed = 0;
 

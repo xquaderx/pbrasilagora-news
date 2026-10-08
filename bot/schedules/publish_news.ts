@@ -38,7 +38,7 @@ export default defineSchedule({
         if (tb !== ta) return tb - ta;
         return (b.credibilityScore ?? 0) - (a.credibilityScore ?? 0);
       })
-      .slice(0, 5);
+      .slice(0, 2);
 
     for (const item of publishable) {
       const check = await callTool("check_news_credibility", {
